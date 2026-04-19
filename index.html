@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URoPE — Universal Relative Position Embedding across Geometric Spaces</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.7.0/vanilla-tilt.min.js"></script>
+
+    <!-- MathJax for LaTeX Support -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
+    <style>
+        /* --- CSS VARIABLES & THEMES --- */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f0f7ff, #e8f4f8);
+            --text-main: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --glass-bg: rgba(255, 255, 255, 0.25);
+            --glass-border: rgba(0, 0, 0, 0.08);
+            --glass-shadow: 0 8px 32px 0 rgba(33, 150, 243, 0.1);
+            --accent: #2196F3;
+            --accent-hover: #1976D2;
+            --code-bg: rgba(245, 245, 245, 0.8);
+        }
+
+        /* --- RESET & BASE --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        body {
+            overflow-x: hidden;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        /* --- 3D BACKGROUND --- */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* --- LAYOUT --- */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 4rem 1.5rem;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+            text-align: center;
+            /* Center align by default for title */
+        }
+
+        /* --- GLASS COMPONENTS --- */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: var(--glass-shadow);
+            padding: 2.5rem;
+            text-align: left;
+            /* Reset text align for content */
+        }
+
+        /* --- HEADER SECTION --- */
+        .paper-header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .paper-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            background: -webkit-linear-gradient(0deg, var(--text-main), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .author-list {
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .author-list a {
+            color: var(--text-main);
+            text-decoration: none;
+            margin: 0 0.5rem;
+            position: relative;
+        }
+
+        .author-list a:hover {
+            color: var(--accent);
+        }
+
+        .venue {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .venue a {
+            color: var(--text-main);
+            text-decoration: none;
+            margin: 0 0.5rem;
+            position: relative;
+        }
+
+        .venue a:hover {
+            color: var(--accent);
+        }
+
+        .affiliations {
+            color: var(--text-secondary);
+            font-size: 1.4rem;
+            margin-bottom: 2rem;
+        }
+
+        .contact {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .link-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-main {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 0.8rem 1.5rem;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s ease;
+        }
+
+        .btn-main:hover {
+            background: var(--accent);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
+            border-color: var(--accent);
+        }
+
+        /* --- TEASER --- */
+        .teaser-img {
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 1rem;
+            border: 1px solid var(--glass-border);
+        }
+
+        .teaser-caption {
+            color: var(--text-secondary);
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        .nvs-video-row {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            align-items: stretch;
+        }
+
+        .nvs-video-row video {
+            flex: 1 1 0;
+            min-width: 0;
+            width: 100%;
+            margin-top: 0;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            object-fit: contain;
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        .method-core-question {
+            text-align: center;
+            margin: 1.25rem 0 1.35rem;
+            font-size: 1.05rem;
+            font-weight: 400;
+            font-style: italic;
+            line-height: 1.7;
+            color: var(--text-main);
+        }
+
+        /* --- CONTENT SECTIONS --- */
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--accent);
+            display: inline-block;
+            padding-bottom: 0.3rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-main);
+            margin-top: 2rem;
+            font-weight: 600;
+        }
+
+        p {
+            line-height: 1.7;
+            color: var(--text-main);
+            margin-bottom: 1rem;
+            font-size: 1.05rem;
+        }
+
+        /* --- BIBTEX --- */
+        .bibtex-box {
+            background: var(--code-bg);
+            padding: 1.5rem;
+            border-radius: 10px;
+            overflow-x: auto;
+            border: 1px solid var(--glass-border);
+            position: relative;
+        }
+
+        pre {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            white-space: pre-wrap;
+        }
+
+        /* --- TABLES --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .best-score {
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        /* --- COMPARISON SLIDER --- */
+        .comp-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem auto;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            cursor: col-resize;
+            line-height: 0;
+            /* Remove bottom image gap */
+        }
+
+        .comp-img-back {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .comp-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 50%;
+            /* Start at 50% */
+            overflow: hidden;
+            border-right: 3px solid var(--accent);
+            z-index: 5;
+        }
+
+        .comp-img-front {
+            height: 100%;
+            /* Width will be set by JS to match container */
+            max-width: none;
+            display: block;
+        }
+
+        .comp-slider {
+            position: absolute;
+            z-index: 10;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            background-color: var(--accent);
+            border: 3px solid white;
+            border-radius: 50%;
+            cursor: col-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            /* Let clicks pass to container */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .comp-slider::after {
+            content: '↔';
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .comp-label {
+            position: absolute;
+            top: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+
+        .label-left {
+            left: 1rem;
+            z-index: 6;
+        }
+
+        .label-right {
+            right: 1rem;
+            z-index: 4;
+        }
+
+        /* --- RESULTS GRID & SELECTOR --- */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            /* Changed to 3 columns */
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .result-item {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            transition: transform 0.3s ease;
+        }
+
+        .result-item:hover {
+            transform: scale(1.02);
+            z-index: 10;
+        }
+
+        .result-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .result-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 0.85rem;
+            text-align: center;
+            backdrop-filter: blur(4px);
+            font-weight: 600;
+        }
+
+        .dataset-selector {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Replaced .dataset-thumb with .dataset-btn to match table buttons */
+        .dataset-btn {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: 0.5rem 2rem;
+            /* Wider padding */
+            border-radius: 20px;
+            /* Pill shape */
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-width: 120px;
+            /* Ensure they are wide */
+        }
+
+        .dataset-btn:hover,
+        .dataset-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* --- TABLE TABS --- */
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .tab-btn.active,
+        .tab-btn:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+        }
+
+        /* --- METHODOLOGY LAYOUT --- */
+        .method-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2.5rem;
+            align-items: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .method-row img {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .method-row img:hover {
+            transform: scale(1.02);
+        }
+
+        .method-text h3 {
+            margin-top: 0;
+            /* Reset global h3 margin for this context */
+            color: var(--accent);
+        }
+
+        /* Side-by-side text + figure — set --split-text-fr / --split-figure-fr on each row */
+        .method-split-row {
+            display: grid;
+            grid-template-columns: minmax(0, var(--split-text-fr, 1.5fr)) minmax(0, var(--split-figure-fr, 0.85fr));
+            gap: 2rem;
+            align-items: start;
+            margin-top: 2rem;
+        }
+
+        .method-split-row .method-split-text h3 {
+            margin-top: 0;
+            color: var(--accent);
+        }
+
+        .method-split-row .method-split-text p {
+            margin-bottom: 0;
+        }
+
+        .method-split-row .method-split-figure {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .method-split-row .method-split-figure img {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .method-split-row .teaser-caption {
+            margin-top: 0;
+            text-align: left;
+        }
+
+        /* --- BIBTEX SCROLLBAR ("Slide Bar") --- */
+        .bibtex-box {
+            background: var(--code-bg);
+            padding: 1.5rem;
+            border-radius: 10px;
+            overflow-x: auto;
+            /* Enable horizontal scroll */
+            border: 1px solid var(--glass-border);
+            position: relative;
+        }
+
+        /* Custom Scrollbar Styling */
+        .bibtex-box::-webkit-scrollbar {
+            height: 10px;
+            /* Visible height */
+        }
+
+        .bibtex-box::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            margin: 0 10px;
+        }
+
+        .bibtex-box::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            /* Matches the purple buttons */
+            border-radius: 5px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+
+        .bibtex-box::-webkit-scrollbar-thumb:hover {
+            background-color: var(--accent-hover);
+        }
+
+        pre {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.0rem;
+            /* Made text smaller */
+            color: var(--text-main);
+            white-space: pre;
+            /* Forces text to stay on one line, creating the "slide bar" effect */
+        }
+
+        .metrics-table {
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 768px) {
+            .paper-title {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 2rem 1rem;
+            }
+
+            .glass-panel {
+                padding: 1.5rem;
+            }
+
+            .link-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn-main {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            /* Stack method rows on mobile */
+            .method-row {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                text-align: center;
+            }
+
+            .nvs-video-row {
+                flex-wrap: wrap;
+            }
+
+            .nvs-video-row video {
+                flex: 1 1 calc(50% - 0.375rem);
+                min-width: 140px;
+            }
+
+            .method-split-row {
+                grid-template-columns: 1fr;
+                gap: 1.25rem;
+            }
+
+            .method-split-row .teaser-caption {
+                text-align: center;
+            }
+
+            /* Reorder second row so image is on top for mobile consistency if desired, 
+               but default stacking (Text then Image) is often preferred for flow. 
+               Leaving default stacking order. */
+        }
+    </style>
+    <meta name="google-site-verification" content="ckOPAEVbXcPaPfTw-55IBv8ONk4piVPU6rT_egFFEDc" />
+</head>
+
+<body>
+
+    <!-- 3D Background -->
+    <div id="canvas-container"></div>
+
+    <div class="container">
+
+        <!-- HEADER -->
+        <header class="paper-header">
+            <h1 class="paper-title">URoPE: Universal Relative Position Embedding across Geometric Spaces</h1>
+
+            <div class="author-list">
+                <a href="http://yichen928.github.io/">Yichen Xie<sup>1,2</sup></a>,
+                <a href="https://deppmeng.github.io/">Depu Meng<sup>1</sup></a>,
+                <a href="https://pengchensheng.com/">Chensheng Peng<sup>1,2</sup></a>,
+                <a href="https://scholar.google.com/citations?user=lf0bLigAAAAJ&hl=en">Yihan Hu<sup>1</sup></a>,
+                <a href="https://scholar.google.com/citations?user=dxHTZAkAAAAJ&hl=en">Quentin Herau<sup>1</sup></a>,
+                <a href="https://me.berkeley.edu/people/masayoshi-tomizuka/">Masayoshi Tomizuka<sup>2</sup></a>,
+                <a href="https://zhanwei.site/">Wei Zhan<sup>1,2</sup></a>
+            </div>
+
+            <br>
+            <div class="affiliations">
+                <sup>1</sup> Applied Intuition &nbsp;·&nbsp; <sup>2</sup> University of California, Berkeley
+            </div>
+
+            <div class="link-buttons">
+                <a href="./static/URoPE.pdf" class="btn-main" title="PDF link to be announced">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" />
+                        <path d="M7 7h10v2H7zm0 4h10v2H7zm0 4h7v2H7z" />
+                    </svg>
+                    Paper
+                </a>
+                <a href="#" class="btn-main">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM6 20V4h5v5h5v11H6z" />
+                    </svg>
+                    Code (Pending)
+                </a>
+            </div>
+        </header>
+
+        <!-- TEASER SECTION -->
+        <!-- <section class="glass-panel" data-tilt data-tilt-max="2" data-tilt-glare data-tilt-max-glare="0.05">
+            <img src="https://placehold.co/900x400/1e293b/FFF?text=Teaser+Video" alt="Teaser" class="teaser-img">
+            <p class="teaser-caption">
+                <b>Figure 1:</b> Our method reconstructs high-fidelity 3D models from as few as 3 sparse input views, significantly outperforming previous SOTA methods in geometry preservation and texture details.
+            </p>
+        </section> -->
+
+        <!-- TL;DR -->
+        <section class="glass-panel" data-tilt data-tilt-max="2" data-tilt-glare data-tilt-max-glare="0.05">
+            <h2>TL;DR</h2>
+            <p style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0;">
+                We propose a parameter-free, intrinsics-aware, and SE(3)-invariant relative position embedding for cross-view geometry by explicitly lifting and projection with fixed depth anchors along camera rays.
+            </p>
+        </section>
+
+        <!-- ABSTRACT -->
+        <section class="glass-panel">
+            <h2>Abstract</h2>
+            <p>
+                Relative position embedding has become a standard mechanism for encoding positional information in Transformers. However, existing formulations are typically limited to a fixed geometric space—1D sequences or regular 2D/3D grids—which restricts their applicability to many computer vision tasks that require geometric reasoning across camera views or between 2D and 3D spaces.
+            </p>
+            <p>
+                We propose <strong>URoPE</strong>, a universal extension of RoPE to cross-view or cross-dimensional geometric spaces. For each key/value image patch, URoPE samples 3D points along the corresponding camera ray at predefined depth anchors and projects them into the query image plane. Standard 2D RoPE is then applied using the projected pixel coordinates. URoPE is a parameter-free and intrinsics-aware relative position embedding that is invariant to the choice of global coordinate systems, while remaining fully compatible with existing RoPE-optimized attention kernels.
+            </p>
+            <p>
+                We evaluate URoPE as a plug-in positional encoding across novel view synthesis, 3D object detection, object tracking, and depth estimation, covering 2D–2D, 2D–3D, and temporal settings. Experiments show that URoPE consistently improves transformer-based models across all tasks, demonstrating its effectiveness and generality for geometric reasoning.
+            </p>
+            <img src="./static/imgs/teaser.jpg"
+                alt="URoPE concept: cross-view relative position embedding" class="teaser-img" style="margin-bottom: 0.5rem;">
+            <p class="teaser-caption"><b>Figure 1. </b>URoPE targets relative position across geometric spaces (cross-view and cross-dimension).</p>
+
+        </section>
+
+        <!-- METHOD -->
+        <section class="glass-panel">
+            <h2>Method</h2>
+            <p>
+                The core question in cross-view relative position is:
+            </p>
+            <p class="method-core-question">
+                <b><em>Where does a key token’s 3D content appear in the query token’s image?</em></b>
+            </p>
+            <p>
+                URoPE answers this with explicit projective geometry instead of abstract ray coordinates alone, so relative position is modeled in one shared image plane coordinate system.
+            </p>
+
+            <div class="method-split-row" style="--split-text-fr: 1.3fr; --split-figure-fr: 1.1fr;">
+                <div class="method-split-text">
+                    <h3>Depth-anchored lifting and projection</h3>
+                    <p>
+                        Each patch center defines a camera ray linking 2D and 3D. Given fixed depth anchors \(\mathcal{D} = \{d_h\}_{h=1}^{K}\), a patch center \((u,v)\) in source view \(i\) is lifted to 3D points \(p_i^h(u,v) = o_i + d_h \cdot r_i(u,v)\), then projected into query view \(j\) to obtain pixel coordinates \((u_{i\to j}^h, v_{i\to j}^h)\) in the query plane.
+                        <!-- <br><br> -->
+                        <!-- For cross-view attention, projections lie on the epipolar line induced by the source position. For 2D–3D attention, relative geometry can be measured between 3D queries and lifted 3D points without image-plane projection. -->
+                    </p>
+                </div>
+                <div class="method-split-figure">
+                    <img src="./static/imgs/projection.png"
+                        onerror="this.src='https://placehold.co/1000x420/e8f4f8/1a1a1a?text=Figure+2%3A+Lifting+and+projection'"
+                        alt="Depth-anchored lifting and projection">
+                    <p class="teaser-caption"><b>Figure 2.</b> Cross-view spatial relationship is modeled with depth-anchored lifting and projection.</p>
+                </div>
+            </div>
+            <div class="method-split-row" style="--split-text-fr: 1.3fr; --split-figure-fr: 0.9fr;">
+                <div class="method-split-text">
+                    <h3>Depth-anchored multi-head attention</h3>
+                    <p>
+                        Cross-view projection is depth-ambiguous along an epipolar line. URoPE assigns <strong>different fixed depth anchors to different heads</strong> (or head groups): each head encodes one depth hypothesis, and multi-head attention jointly covers near- to far-field correspondences. Per-head channels are split across horizontal and vertical axes so standard 2D RoPE applies in the query plane to maintain compatibility with efficient RoPE attention implementations.
+                    </p>
+                </div>
+                <div class="method-split-figure">
+                    <img src="./static/imgs/attn.png"
+                        onerror="this.src='https://placehold.co/1000x420/e8f4f8/1a1a1a?text=Figure+3%3A+Depth-anchored+multi-head+attention'"
+                        alt="Depth-anchored multi-head attention"
+                        style="width: 70%; max-width: 100%; align-self: center;">
+                    <p class="teaser-caption"><b>Figure 3.</b> Different depth anchors are assigned to different heads for multihead attention.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMPARISON TABLE (paper Table 1, simplified) -->
+        <section class="glass-panel">
+            <h2>Position embedding comparison</h2>
+            <p style="color: var(--text-secondary); font-size: 0.95rem;">Summary of cross-view position embedding properties (see paper Table&nbsp;1 for full notation).</p>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Mechanism</th>
+                            <th>Per-patch geo.</th>
+                            <th>SE(3) inv.</th>
+                            <th>Param-free</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Plücker</td><td>Concat.</td><td>✓</td><td>✗</td><td>✓</td></tr>
+                        <tr><td>Relative Ray</td><td>RoPE (ray)</td><td>✓</td><td>✗</td><td>✓</td></tr>
+                        <tr><td>GTA</td><td>MatMul</td><td>✗</td><td>✓</td><td>✓</td></tr>
+                        <tr><td>PRoPE</td><td>RoPE + MatMul</td><td>✗</td><td>✓</td><td>✓</td></tr>
+                        <tr><td>RayRoPE</td><td>RoPE + Linear</td><td>✓</td><td>✓</td><td>✗</td></tr>
+                        <tr><td><span class="best-score">URoPE</span></td><td><span class="best-score">RoPE (proj.)</span></td><td><span class="best-score">✓</span></td><td><span class="best-score">✓</span></td><td><span class="best-score">✓</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- RESULTS -->
+        <section class="glass-panel">
+            <h2>Results</h2>
+            <p>
+                URoPE is integrated as a <strong>plug-in</strong> relative position embedding without task-specific redesigns.
+            </p>
+
+            <div class="tab-container" style="flex-wrap: wrap;">
+                <button type="button" class="tab-btn active" onclick="switchTable('nvs', this)">Novel view synthesis</button>
+                <button type="button" class="tab-btn" onclick="switchTable('det', this)">3D detection &amp; tracking</button>
+                <button type="button" class="tab-btn" onclick="switchTable('stereo', this)">Stereo depth</button>
+            </div>
+
+            <div id="table-nvs" class="metrics-table">
+                <h3 style="margin-top: 0;">Novel view synthesis</h3>
+                <!-- <p style="color: var(--text-secondary); font-size: 0.95rem;">Objaverse and RealEstate10k; metrics: PSNR↑, SSIM↑, LPIPS↓.</p> -->
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th colspan="3">Objaverse</th>
+                            <th colspan="3">RealEstate10k</th>
+                        </tr>
+                        <tr>
+                            <th></th>
+                            <th>PSNR</th><th>SSIM</th><th>LPIPS</th>
+                            <th>PSNR</th><th>SSIM</th><th>LPIPS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Plücker Ray</td><td>22.28</td><td>0.856</td><td>0.279</td><td>23.95</td><td>0.764</td><td>0.118</td></tr>
+                        <tr><td>6D RoPE</td><td>24.42</td><td>0.891</td><td>0.191</td><td>25.73</td><td>0.819</td><td>0.086</td></tr>
+                        <tr><td>P-RoPE</td><td>24.88</td><td>0.896</td><td>0.176</td><td>25.28</td><td>0.806</td><td>0.092</td></tr>
+                        <tr><td>RayRoPE</td><td>24.96</td><td>0.897</td><td>0.175</td><td>24.94</td><td>0.799</td><td>0.097</td></tr>
+                        <tr><td><span class="best-score">URoPE (ours)</span></td><td class="best-score">25.09</td><td class="best-score">0.900</td><td class="best-score">0.165</td><td class="best-score">26.02</td><td class="best-score">0.827</td><td class="best-score">0.080</td></tr>
+                    </tbody>
+                </table>
+                <h4 style="margin-top: 1rem; font-size: 1.05rem;">Qualitative results</h4>
+                <div class="nvs-video-row">
+                    <video muted playsinline autoplay loop>
+                        <source src="./videos/99_088e115752ce9e56.mp4" type="video/mp4">
+                    </video>
+                    <video muted playsinline autoplay loop>
+                        <source src="./videos/0_000c3ab189999a83.mp4" type="video/mp4">
+                    </video>
+                    <video muted playsinline autoplay loop>
+                        <source src="./videos/33_02b618a34bc12ff9.mp4" type="video/mp4">
+                    </video>
+                    <video muted playsinline autoplay loop>
+                        <source src="./videos/56_049a98f70ce9f471.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <div class="nvs-video-row">
+                    <video muted playsinline autoplay loop>
+                        <source src="./videos/77_06c71ce295284689.mp4" type="video/mp4">
+                    </video>
+                    <video muted playsinline autoplay loop>
+                        <source src="./videos/5_00620c2b77518524.mp4" type="video/mp4">
+                    </video>
+                    <video muted playsinline autoplay loop>
+                        <source src="./videos/91_07d1d5769e8d797c.mp4" type="video/mp4">
+                    </video>
+                    <video muted playsinline autoplay loop>
+                        <source src="./videos/96_086e9118bec887be.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <h4 style="margin-top: 1rem; font-size: 1.05rem;">Comparisons with other methods</h4>
+                <img src="./static/imgs/nvs.png" alt="Novel view synthesis qualitative results" class="teaser-img"
+                    style="margin-top: 1.5rem;">
+            </div>
+
+            <div id="table-det" class="metrics-table" style="display: none;">
+                <h3 style="margin-top: 0;">3D object detection and tracking </h3>
+                <!-- <p style="color: var(--text-secondary); font-size: 0.95rem;">PETR (single-frame multiview) and StreamPETR (multi-frame); NDS↑, mAP↑, AMOTA↑.</p> -->
+                <h4 style="margin-top: 1rem; font-size: 1.05rem;">(a) Single-frame and multi-view</h4>
+                <table>
+                    <thead>
+                        <tr><th>Methods</th><th>NDS</th><th><span style="text-transform: none;">mAP</span></th><th>AMOTA</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>PETR</td><td>34.9</td><td>30.9</td><td>0.222</td></tr>
+                        <tr><td><span class="best-score">PETR + URoPE</span></td><td class="best-score">37.3</td><td class="best-score">32.2</td><td class="best-score">0.255</td></tr>
+                    </tbody>
+                </table>
+                <h4 style="margin-top: 1.5rem; font-size: 1.05rem;">(b) Multi-frame and mult-iview</h4>
+                <table>
+                    <thead>
+                        <tr><th>Methods</th><th>NDS</th><th><span style="text-transform: none;">mAP</span></th><th>AMOTA</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>StreamPETR</td><td>47.6</td><td>37.5</td><td>0.335</td></tr>
+                        <tr><td><span class="best-score">StreamPETR + URoPE</span></td><td class="best-score">50.6</td><td class="best-score">41.1</td><td class="best-score">0.380</td></tr>
+                    </tbody>
+                </table>
+                <img src="./static/imgs/detection.png" alt="3D object detection qualitative results" class="teaser-img"
+                    style="margin-top: 1.5rem;">
+            </div>
+
+            <div id="table-stereo" class="metrics-table" style="display: none;">
+                <h3 style="margin-top: 0;">Stereo depth</h3>
+                <!-- <p style="color: var(--text-secondary); font-size: 0.95rem;">Lower is better for Abs&nbsp;Rel, Sq&nbsp;Rel, RMSE, RMSE&nbsp;log. † Sq&nbsp;Rel on RGBD is less reliable per dataset notes.</p> -->
+                <h4 style="margin-top: 1rem; font-size: 1.05rem;">RGBD</h4>
+                <table>
+                    <thead>
+                        <tr><th>Methods</th><th>Abs Rel</th><th>Sq Rel</th><th>RMSE</th><th>RMSE log</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>UniMatch</td><td>0.123</td><td>0.175†</td><td>0.678</td><td>0.203</td></tr>
+                        <tr><td>UniMatch + P-RoPE</td><td>0.105</td><td>0.203†</td><td>0.573</td><td>0.181</td></tr>
+                        <tr><td><span class="best-score">UniMatch + URoPE</span></td><td class="best-score">0.103</td><td>0.201†</td><td class="best-score">0.571</td><td class="best-score">0.181</td></tr>
+                    </tbody>
+                </table>
+                <h4 style="margin-top: 1.5rem; font-size: 1.05rem;">Scenes11</h4>
+                <table>
+                    <thead>
+                        <tr><th>Methods</th><th>Abs Rel</th><th>Sq Rel</th><th>RMSE</th><th>RMSE log</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>UniMatch</td><td>0.065</td><td>0.085</td><td>0.575</td><td>0.126</td></tr>
+                        <tr><td>UniMatch + P-RoPE</td><td>0.049</td><td>0.063</td><td>0.474</td><td>0.104</td></tr>
+                        <tr><td><span class="best-score">UniMatch + URoPE</span></td><td>0.049</td><td class="best-score">0.062</td><td class="best-score">0.450</td><td>0.104</td></tr>
+                    </tbody>
+                </table>
+                <h4 style="margin-top: 1.5rem; font-size: 1.05rem;">SUN3D</h4>
+                <table>
+                    <thead>
+                        <tr><th>Methods</th><th>Abs Rel</th><th>Sq Rel</th><th>RMSE</th><th>RMSE log</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>UniMatch</td><td>0.131</td><td>0.098</td><td>0.397</td><td>0.169</td></tr>
+                        <tr><td>UniMatch + P-RoPE</td><td>0.117</td><td>0.075</td><td>0.343</td><td>0.152</td></tr>
+                        <tr><td><span class="best-score">UniMatch + URoPE</span></td><td class="best-score">0.112</td><td class="best-score">0.063</td><td class="best-score">0.329</td><td class="best-score">0.148</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- BIBTEX -->
+        <section class="glass-panel">
+            <h2>Citation</h2>
+            <div class="bibtex-box">
+                <pre>@misc{xie2026urope,
+  title        = {URoPE: Universal Relative Position Embedding across Geometric Spaces},
+  author       = {Xie, Yichen and Meng, Depu and Peng, Chensheng and Hu, Yihan and Herau, Quentin and Tomizuka, Masayoshi and Zhan, Wei},
+  year         = {2026},
+  note         = {Manuscript under review}
+}</pre>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // --- VANILLA TILT INIT ---
+        VanillaTilt.init(document.querySelectorAll("[data-tilt]"), {
+            max: 3,
+            speed: 400,
+            glare: true,
+            "max-glare": 0.1,
+        });
+
+        // --- TABLE SWITCHING LOGIC ---
+        function switchTable(tableId, btn) {
+            // Update buttons
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Hide all tables
+            document.querySelectorAll('.metrics-table').forEach(t => t.style.display = 'none');
+
+            // Show selected table
+            document.getElementById('table-' + tableId).style.display = 'block';
+        }
+
+        // --- THREE.JS BACKGROUND ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+
+        const container3d = document.getElementById('canvas-container');
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        container3d.appendChild(renderer.domElement);
+
+        // Particles
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 700;
+
+        const posArray = new Float32Array(particlesCount * 3);
+
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 15;
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+        // Material
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.025,
+            color: 0x2196F3,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        camera.position.z = 3;
+
+        // Mouse interaction
+        let mouseX = 0;
+        let mouseY = 0;
+
+        document.addEventListener('mousemove', (event) => {
+            mouseX = event.clientX / window.innerWidth - 0.5;
+            mouseY = event.clientY / window.innerHeight - 0.5;
+        });
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            particlesMesh.rotation.y = elapsedTime * 0.03;
+            particlesMesh.rotation.y += mouseX * 0.1;
+            particlesMesh.rotation.x += mouseY * 0.1;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+
+</html>
